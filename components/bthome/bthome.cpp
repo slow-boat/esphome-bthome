@@ -606,12 +606,17 @@ void BTHome::start_advertising_() {
     }
   }
 
-  // Start advertising directly (don't wait for GAP events)
-  ESP_LOGD(TAG, "Starting advertising directly");
-  err = esp_ble_gap_start_advertising(&this->ble_adv_params_);
-  if (err != ESP_OK) {
-    ESP_LOGE(TAG, "esp_ble_gap_start_advertising failed: %s", esp_err_to_name(err));
-  }
+  // Delay to allow ESP-IDF BLE stack to process data set commands before starting
+  this->set_timeout("adv_start", 50, [this]() {
+    ESP_LOGD(TAG, "Starting advertising after delay");
+    esp_err_t err = esp_ble_gap_start_advertising(&this->ble_adv_params_);
+    if (err != ESP_OK) {
+      ESP_LOGE(TAG, "esp_ble_gap_start_advertising failed: %s", esp_err_to_name(err));
+    } else {
+      this->advertising_ = true;
+      ESP_LOGD(TAG, "Advertising started");
+    }
+  });
   #endif
 #endif
 
