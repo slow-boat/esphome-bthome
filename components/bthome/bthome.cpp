@@ -152,6 +152,10 @@ void BTHome::setup() {
       this->build_scan_response_data_();
       this->start_advertising_();
     }
+  };
+  
+  global_ble->add_gap_event_callback([this](esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param_t *param) {
+      this->gap_event_handler(event, param);
   });
   #endif
 #endif
@@ -735,10 +739,35 @@ void BTHome::nimble_on_reset_(int reason) {
 }
 #endif
 
-#if defined(USE_ESP32) && defined(USE_BTHOME_BLUEDROID)
+#if defined(USE_ESP32)
 void BTHome::gap_event_handler(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param_t *param) {
-  // GAP events are handled by ESPHome's BLE component
-  // We start advertising directly in start_advertising_()
+    switch (event) {
+        case ESP_GAP_BLE_ADV_DATA_RAW_SET_COMPLETE_EVT:
+            this->adv_data_set_ = true;
+            if (this->scan_rsp_data_set_ || this->scan_rsp_data_len_ == 0) {
+                esp_ble_gap_start_advertising(&this->ble_adv_params_);
+            }
+            break;
+        case ESP_GAP_BLE_SCAN_RSP_DATA_RAW_SET_COMPLETE_EVT:
+            this->scan_rsp_data_set_ = true;
+            if (this->adv_data_set_) {
+                esp_ble_gap_start_advertising(&this->ble_adv_params_);
+            }
+            break;
+        case ESP_GAP_BLE_ADV_START_COMPLETE_EVT:
+            if (param->adv_start_cmpl.status == ESP_BT_STATUS_SUCCESS) {
+                this->advertising_ = true;
+                ESP_LOGD(TAG, "Advertising started successfully");
+            } else {
+                ESP_LOGE(TAG, "Advertising start failed");
+            }
+            break;
+        case ESP_GAP_BLE_ADV_STOP_COMPLETE_EVT:
+            this->advertising_ = false;
+            break;
+        default:
+            break;
+    }
 }
 #endif
 
