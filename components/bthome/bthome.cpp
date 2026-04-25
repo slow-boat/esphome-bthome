@@ -152,7 +152,7 @@ void BTHome::setup() {
       this->build_scan_response_data_();
       this->start_advertising_();
     }
-  };
+  });
   
   global_ble->add_gap_event_callback([this](esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param_t *param) {
       this->gap_event_handler(event, param);
